@@ -12,25 +12,17 @@ class checkers_env:
         self.player = player
 
     def initialize_board(self):
-        """
-        Initialize the board based on board size.
-        """
         board = np.zeros((self.board_size, self.board_size), dtype=int)
-        rows = (self.board_size // 2) - 1  # Number of rows occupied by pieces
+        rows = (self.board_size // 2) - 1
 
-        # Place player 1 pieces
         for row in range(rows):
             for col in range(row % 2, self.board_size, 2):
-                board[row, col] = 1
+                board[row, col] = -1  # Player -1's pieces
 
-        # Place player -1 pieces
         for row in range(self.board_size - rows, self.board_size):
             for col in range(row % 2, self.board_size, 2):
-                board[row, col] = -1
-        print("Initialized Board:")
-        print(board)
+                board[row, col] = 1  # Player 1's pieces
         return board
-
     def reset(self):
         """
         Reset the board to its initial state.
