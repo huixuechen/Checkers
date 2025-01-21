@@ -74,7 +74,8 @@ class checkers_env:
 
     def game_winner(self, board=None):
         """
-        Determine the winner of the game.
+        Determine the winner of the game based on piece counts
+        or if no legal moves are available for any player.
         """
         board = board if board is not None else self.board
         player1_pieces = np.sum(board == 1)
@@ -85,7 +86,11 @@ class checkers_env:
         elif player2_pieces == 0:
             return 1  # Player 1 wins
         elif not self.valid_moves(1) and not self.valid_moves(-1):
-            return 0  # Draw
+            return 0  # Draw, no legal moves for either player
+        elif not self.valid_moves(1):
+            return -1  # Player 1 has no moves, Player -1 wins
+        elif not self.valid_moves(-1):
+            return 1  # Player -1 has no moves, Player 1 wins
         return None
 
     def step(self, action, player):
@@ -103,8 +108,13 @@ class checkers_env:
         self.render()
 
         reward = 1 if abs(end_row - start_row) == 2 else 0  # Reward for capturing a piece
-        done = self.game_winner(self.board) is not None
-        return self.board, reward if not done else 10
+        winner = self.game_winner(self.board)
+        if winner is not None:
+            done = True
+            reward = 10 if winner == player else -10  # Reward for winning or penalty for losing
+        else:
+            done = False
+        return self.board, reward, done
 
     def render(self):
         """
