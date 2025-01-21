@@ -130,3 +130,9 @@ class checkers_env:
                     piece = "| "
                 print(piece, end='')
             print("|")
+
+    def is_dangerous_action(self, action):
+        pass
+
+    def is_winner(self, player):
+        pass

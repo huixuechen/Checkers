@@ -1,5 +1,7 @@
+# CheckerGUI.py
 import tkinter as tk
 from tkinter import messagebox
+
 from checkers_env import checkers_env
 from LearningAgent import QLearningAgent
 
@@ -53,7 +55,6 @@ class CheckerGUI:
         self.invalid_move_label = tk.Label(control_frame, text="", font=("Arial", 10, "italic"), fg="red", bg="#D0E4C8")
         self.status_label.pack(pady=5)
         self.invalid_move_label.pack(pady=5)
-
 
         tk.Button(control_frame, text="Reset Game", command=self.reset_game, width=15).pack(pady=10)
         tk.Button(control_frame, text="Show Valid Moves", command=self.show_valid_moves, width=15).pack(pady=5)
@@ -164,7 +165,7 @@ class CheckerGUI:
                 self.check_winner()
 
                 if self.current_player == -1:
-                    self.agent_play()
+                    self.root.after(1000, self.agent_play)  # Delay agent's move by 1 second
 
             else:
                 self.invalid_move_label.config(text="Invalid Move")
