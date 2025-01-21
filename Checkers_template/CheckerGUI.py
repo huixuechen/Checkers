@@ -40,8 +40,8 @@ class CheckerGUI:
 
         control_frame = tk.Frame(main_frame, bg="#D0E4C8", relief=tk.GROOVE, bd=2)
         control_frame.pack(side=tk.LEFT, padx=10, pady=10, fill=tk.Y)
-
-        tk.Label(control_frame, text="Select Difficulty", font=("Arial", 12, "bold"), bg="#D0E4C8").pack(pady=5)
+        tk.Label(control_frame, text="Checkers", font=("Arial", 12, "bold"), bg="#D0E4C8").pack(pady=5)
+        tk.Label(control_frame, text="Difficulty", font=("Arial", 12, "bold"), bg="#D0E4C8").pack(pady=5)
         tk.Button(control_frame, text="Low", command=lambda: self.set_difficulty('low'), width=15).pack(pady=5)
         tk.Button(control_frame, text="Medium", command=lambda: self.set_difficulty('medium'), width=15).pack(pady=5)
         tk.Button(control_frame, text="High", command=lambda: self.set_difficulty('high'), width=15).pack(pady=5)
@@ -50,7 +50,10 @@ class CheckerGUI:
         self.difficulty_label = tk.Label(control_frame, text=f"Difficulty: {self.difficulty.capitalize()}", font=("Arial", 10), bg="#D0E4C8")
         self.difficulty_label.pack(pady=5)
         self.status_label = tk.Label(control_frame, text="Player 1's Turn", font=("Arial", 10), bg="#D0E4C8")
+        self.invalid_move_label = tk.Label(control_frame, text="", font=("Arial", 10, "italic"), fg="red", bg="#D0E4C8")
         self.status_label.pack(pady=5)
+        self.invalid_move_label.pack(pady=5)
+
 
         tk.Button(control_frame, text="Reset Game", command=self.reset_game, width=15).pack(pady=10)
         tk.Button(control_frame, text="Show Valid Moves", command=self.show_valid_moves, width=15).pack(pady=5)
@@ -62,7 +65,6 @@ class CheckerGUI:
 
         right_frame = tk.Frame(main_frame, bg="#D0E4C8")
         right_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.Y)
-        tk.Label(right_frame, text="Checkers", font=("Arial", 20, "bold"), bg="#D0E4C8").pack()
 
     def set_difficulty(self, difficulty):
         self.difficulty = difficulty
@@ -165,7 +167,7 @@ class CheckerGUI:
                     self.agent_play()
 
             else:
-                messagebox.showwarning("Invalid Move", "This is not a valid move.")
+                self.invalid_move_label.config(text="Invalid Move")
             self.selected_piece = None
             self.render_board()
 
