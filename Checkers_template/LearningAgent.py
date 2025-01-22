@@ -1,35 +1,41 @@
-# LearningAgent.py
 import numpy as np
 import random
 from collections import defaultdict
 
+
 class QLearningAgent:
-    def __init__(self, env, player, learning_rate=0.1, discount_factor=0.99, exploration_rate=1.0, exploration_decay=0.995):
+    def __init__(self, env, player, difficulty="medium"):
         self.env = env
         self.player = player
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
-        self.exploration_rate = exploration_rate
-        self.exploration_decay = exploration_decay
-        self.min_exploration_rate = 0.1
-        self.exploration_log = []
+        self.difficulty = difficulty.lower()
         self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
-        self.complexity_threshold = 0.5  # Threshold for task complexity
+        self.exploration_log = []
 
-    def task_similarity(self, state, next_state, complexity):
-        vector1 = np.asarray(state)
-        vector2 = np.asarray(next_state)
-        if complexity <= self.complexity_threshold:
-            return 1 / (1 + np.linalg.norm(vector1 - vector2))  # Euclidean distance
+        # Difficulty-specific parameters
+        if self.difficulty == "easy":
+            self.learning_rate = 0.05
+            self.discount_factor = 0.5
+            self.exploration_rate = 0.9
+            self.exploration_decay = 0.995
+        elif self.difficulty == "medium":
+            self.learning_rate = 0.1
+            self.discount_factor = 0.7
+            self.exploration_rate = 0.5
+            self.exploration_decay = 0.99
+        elif self.difficulty == "hard":
+            self.learning_rate = 0.2
+            self.discount_factor = 0.9
+            self.exploration_rate = 0.2
+            self.exploration_decay = 0.995
         else:
-            norm1 = np.linalg.norm(vector1)
-            norm2 = np.linalg.norm(vector2)
-            return np.dot(vector1, vector2) / (norm1 * norm2)  # Cosine similarity
+            raise ValueError("Invalid difficulty level. Choose 'easy', 'medium', or 'hard'.")
+        self.min_exploration_rate = 0.05
 
     def choose_action(self, state, use_ucb=False):
         valid_moves = self.env.valid_moves(self.player)
         if not valid_moves:
             return None  # No valid moves available
+
         if random.uniform(0, 1) < self.exploration_rate:
             self.exploration_log.append("explore")
             return random.choice(valid_moves)
@@ -41,30 +47,26 @@ class QLearningAgent:
             state_hash = self.state_to_hash(state)
             return valid_moves[np.argmax(self.q_table[state_hash])]
 
-    def learn(self, state, action, reward, next_state, task_complexity=None):
+    def learn(self, state, action, reward, next_state):
         valid_moves = self.env.valid_moves(self.player)
-        if action not in valid_moves:
+        if not valid_moves or action not in valid_moves:
             return
-        if action is None:
-            return
-        if task_complexity is not None:
-            similarity_score = self.task_similarity(state, next_state, task_complexity)
-            reward *= similarity_score
+
         state_hash = self.state_to_hash(state)
         next_state_hash = self.state_to_hash(next_state)
         action_index = valid_moves.index(action)
         best_next_action = np.argmax(self.q_table[next_state_hash])
+
         td_target = reward + self.discount_factor * self.q_table[next_state_hash][best_next_action]
         td_error = td_target - self.q_table[state_hash][action_index]
 
         if state_hash not in self.q_table:
             self.q_table[state_hash] = np.full(len(valid_moves), -1.0)
+
         self.q_table[state_hash][action_index] += self.learning_rate * td_error
-        if task_complexity is not None and task_complexity > self.complexity_threshold:
-            self.q_table[state_hash][action_index] += similarity_score * self.learning_rate
 
     def state_to_hash(self, state):
-        return hash(tuple(state)) if state else 0
+        return hash(tuple(state.flatten())) if state is not None else 0
 
     def update_exploration_rate(self):
         self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay)

@@ -1,0 +1,6 @@
+{
+    "total_episodes": 5000,
+    "final_win_rate": 0.5,
+    "final_average_reward": -6.172,
+    "final_exploration_rate": 0.05
+}

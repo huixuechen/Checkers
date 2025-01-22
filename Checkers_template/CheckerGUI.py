@@ -1,8 +1,7 @@
 # CheckerGUI.py
 import tkinter as tk
 from tkinter import messagebox
-
-from checkers_env import checkers_env
+from checkers_env import CheckersEnv  # Ensure the class name matches
 from LearningAgent import QLearningAgent
 
 class CheckerGUI:
@@ -11,7 +10,7 @@ class CheckerGUI:
         self.root.title("Checkers")
         self.difficulty = difficulty
         self.board_size = 6 if difficulty == 'low' else 8
-        self.env = checkers_env(board_size=self.board_size)
+        self.env = CheckersEnv(board_size=self.board_size)  # Corrected class name
         self.canvas_size = 500
         self.cell_size = self.canvas_size // self.board_size
         self.current_player = 1
@@ -29,12 +28,8 @@ class CheckerGUI:
         self.canvas.bind("<ButtonRelease-1>", self.on_piece_release)
 
     def create_agent(self, difficulty):
-        if difficulty == 'low':
-            return QLearningAgent(self.env, player=-1, learning_rate=0.1, discount_factor=0.9, exploration_rate=1.0)
-        elif difficulty == 'medium':
-            return QLearningAgent(self.env, player=-1, learning_rate=0.05, discount_factor=0.95, exploration_rate=0.5)
-        else:  # high difficulty
-            return QLearningAgent(self.env, player=-1, learning_rate=0.01, discount_factor=0.99, exploration_rate=0.1)
+        return QLearningAgent(self.env, player=-1, difficulty=difficulty)
+
 
     def setup_ui(self):
         main_frame = tk.Frame(self.root, bg="#D0E4C8")
@@ -182,6 +177,8 @@ class CheckerGUI:
             self.status_label.config(text=f"Player {self.current_player}'s Turn")
             self.render_board()
             self.check_winner()
+            if self.current_player == -1:
+                self.root.after(1000, self.agent_play)  # Continue agent's move if it's still the agent's turn
 
     def check_winner(self):
         winner = self.env.game_winner(self.env.board)
