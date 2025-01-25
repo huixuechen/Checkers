@@ -50,7 +50,7 @@ def plot_training_results(total_rewards):
 if __name__ == "__main__":
     # Run the game GUI
     root = tk.Tk()
-    gui = CheckerGUI(root, difficulty='medium')  # Change difficulty here
+    gui = CheckerGUI(root, difficulty='easy')  # Change difficulty here
     root.mainloop()
 
     # Initialize the environment and the Q-learning agent

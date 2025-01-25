@@ -17,7 +17,7 @@ class CheckersEnv:
 
         for row in range(rows):
             for col in range(row % 2, self.board_size, 2):
-                board[row, col] = -1  # Player -1's pieces
+                board[row, col] = 2  # Player 2's pieces
 
         for row in range(self.board_size - rows, self.board_size):
             for col in range(row % 2, self.board_size, 2):
@@ -36,7 +36,6 @@ class CheckersEnv:
             for col in range(self.board_size):
                 piece = self.board[row, col]
                 if piece == player or piece == player * 2:  # Include kings
-                    # King pieces can move in both directions
                     piece_directions = directions
                     if abs(piece) == 2:
                         piece_directions = directions + [(d[0] * -1, d[1] * -1) for d in directions]
@@ -46,14 +45,13 @@ class CheckersEnv:
                         if 0 <= new_row < self.board_size and 0 <= new_col < self.board_size:
                             if self.board[new_row, new_col] == 0:
                                 moves.append([row, col, new_row, new_col])
-                        # Check for captures
                         cap_row, cap_col = row + dr, col + dc
                         end_row, end_col = row + 2 * dr, col + 2 * dc
                         if (
-                            0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
-                            0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
-                            self.board[cap_row, cap_col] == -player and
-                            self.board[end_row, end_col] == 0
+                                0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
+                                0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
+                                self.board[cap_row, cap_col] == 3 - player and
+                                self.board[end_row, end_col] == 0
                         ):
                             moves.append([row, col, end_row, end_col])
         return moves
@@ -68,31 +66,31 @@ class CheckersEnv:
     def promote_to_king(self):
         for col in range(self.board_size):
             if self.board[0, col] == 1:  # Player 1 reaches the back row
-                self.board[0, col] = 2
-            if self.board[self.board_size - 1, col] == -1:  # Player -1 reaches the back row
-                self.board[self.board_size - 1, col] = -2
+                self.board[0, col] = 2  # Promote to player 1's king
+            if self.board[self.board_size - 1, col] == 2:  # Player 2 reaches the back row
+                self.board[self.board_size - 1, col] = -2  # Promote to player 2's king
 
     def game_winner(self):
         player1_pieces = np.sum(self.board == 1) + np.sum(self.board == 2)
-        player2_pieces = np.sum(self.board == -1) + np.sum(self.board == -2)
+        player2_pieces = np.sum(self.board == 2) + np.sum(self.board == -2)
 
         if player1_pieces == 0:
-            return -1  # Player -1 wins
+            return 2  # Player 2 wins
         elif player2_pieces == 0:
             return 1  # Player 1 wins
-        elif not self.valid_moves(1) and not self.valid_moves(-1):
+        elif not self.valid_moves(1) and not self.valid_moves(2):
             return 0  # Draw
         elif not self.valid_moves(1):
-            return -1  # Player 1 has no moves
-        elif not self.valid_moves(-1):
-            return 1  # Player -1 has no moves
+            return 2  # Player 1 has no moves
+        elif not self.valid_moves(2):
+            return 1  # Player 2 has no moves
         return None
 
-    def step(self, action):
+    def step(self, action, player):
         start_row, start_col, end_row, end_col = action
         self.board[end_row, end_col] = self.board[start_row, start_col]
         self.board[start_row, start_col] = 0
-        self.capture_piece(action)
+        self.capture_piece(action)  # Handle capture
         self.promote_to_king()
 
         reward = 1 if abs(end_row - start_row) == 2 else 0

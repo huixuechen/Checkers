@@ -4,25 +4,30 @@ from collections import defaultdict
 
 
 class QLearningAgent:
-    def __init__(self, env, player, difficulty="medium"):
+    def __init__(self, env, player, board_size=6, difficulty='easy'):
         self.env = env
         self.player = player
-        self.difficulty = difficulty.lower()
+        self.board_size = board_size
+        self.difficulty = difficulty
         self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
         self.exploration_log = []
 
-        # Difficulty-specific parameters
-        if self.difficulty == "easy":
+        # Set difficulty based on the provided difficulty level
+        self.set_difficulty(self.difficulty)
+
+    def set_difficulty(self, difficulty):
+        difficulty = difficulty.lower()
+        if difficulty == "easy":
             self.learning_rate = 0.05
             self.discount_factor = 0.5
             self.exploration_rate = 0.9
             self.exploration_decay = 0.995
-        elif self.difficulty == "medium":
+        elif difficulty == "medium":
             self.learning_rate = 0.1
             self.discount_factor = 0.7
             self.exploration_rate = 0.5
             self.exploration_decay = 0.99
-        elif self.difficulty == "hard":
+        elif difficulty == "hard":
             self.learning_rate = 0.2
             self.discount_factor = 0.9
             self.exploration_rate = 0.2
