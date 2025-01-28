@@ -37,7 +37,7 @@ class CheckersEnv:
                 piece = self.board[row, col]
 
                 if piece == player or piece == player + 2:  # 普通棋子 或 王棋
-                    piece_directions = king_directions if piece > 2 else forward_directions
+                    piece_directions = king_directions if piece in [3, 4] else forward_directions
 
                     for dr, dc in piece_directions:
                         new_row, new_col = row + dr, col + dc
@@ -50,11 +50,12 @@ class CheckersEnv:
 
                         # **修正：只允许相邻吃子**
                         if (
-                            0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
-                            0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
-                            self.board[cap_row, cap_col] in [3 - player, (3 - player) + 2] and
-                            self.board[end_row, end_col] == 0 and
-                            abs(cap_row - row) == 1 and abs(cap_col - col) == 1  # **确保棋子相邻**
+                                0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
+                                0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
+                                self.board[cap_row, cap_col] in [3 - player, (3 - player) + 2] and
+                                self.board[end_row, end_col] == 0 and
+                                (piece in [3, 4] or (abs(cap_row - row) == 1 and abs(cap_col - col) == 1))
+                        # **王棋不受相邻限制**
                         ):
                             jump_moves.append([row, col, end_row, end_col])
 
@@ -106,6 +107,8 @@ class CheckersEnv:
     def handle_multiple_jumps(self, row, col, player):
         """递归处理连跳吃子"""
         additional_moves = self.get_additional_jumps(row, col, player)
+
+        # **确保所有可能的跳跃都被执行**
         for move in additional_moves:
             end_row, end_col = move[2], move[3]
             self.board[end_row, end_col] = self.board[row, col]
