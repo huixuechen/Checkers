@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from collections import defaultdict
-
+from TaskSimilarity import TaskSimilarity
 
 class QLearningAgent:
     def __init__(self, env, player, board_size=6, difficulty='easy'):
@@ -9,8 +9,10 @@ class QLearningAgent:
         self.player = player
         self.board_size = board_size
         self.difficulty = difficulty
+        self.task_similarity = TaskSimilarity()
         self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
         self.exploration_log = []
+        self.visits = defaultdict(int)
 
         # Set difficulty based on the provided difficulty level
         self.set_difficulty(self.difficulty)
@@ -41,6 +43,15 @@ class QLearningAgent:
         if not valid_moves:
             return None  # No valid moves available
 
+        state_hash = self.state_to_hash(state)
+        self.visits[state_hash] += 1  # Track state visits
+
+        similar_state = self.task_similarity.find_similar_state(state)
+        if similar_state:
+            best_action = self.task_similarity.get_best_action(similar_state, valid_moves)
+            if best_action:
+                return best_action
+
         if random.uniform(0, 1) < self.exploration_rate:
             self.exploration_log.append("explore")
             return random.choice(valid_moves)
@@ -49,7 +60,6 @@ class QLearningAgent:
             return self.select_ucb_action(state, valid_moves)
         else:
             self.exploration_log.append("exploit")
-            state_hash = self.state_to_hash(state)
             return valid_moves[np.argmax(self.q_table[state_hash])]
 
     def learn(self, state, action, reward, next_state):
@@ -69,6 +79,7 @@ class QLearningAgent:
             self.q_table[state_hash] = np.full(len(valid_moves), -1.0)
 
         self.q_table[state_hash][action_index] += self.learning_rate * td_error
+        self.task_similarity.store_state(state, action)  # Store learned state-action pairs
 
     def state_to_hash(self, state):
         return hash(tuple(state.flatten())) if state is not None else 0
@@ -79,11 +90,10 @@ class QLearningAgent:
     def select_ucb_action(self, state, valid_moves):
         state_hash = self.state_to_hash(state)
         ucb_values = []
-        total_visits = sum(self.q_table[state_hash]) + 1
-        total_visits = total_visits if total_visits > 0 else 1
+        total_visits = sum(self.visits.values()) + 1
         for action_index in range(len(valid_moves)):
             q_value = self.q_table[state_hash][action_index]
-            ucb_value = q_value + 2 * np.sqrt(np.log(total_visits) / (1 + self.q_table[state_hash][action_index]))
+            ucb_value = q_value + 2 * np.sqrt(np.log(total_visits) / (1 + self.visits[state_hash]))
             ucb_values.append(ucb_value)
         return valid_moves[np.argmax(ucb_values)]
 
