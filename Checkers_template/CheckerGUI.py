@@ -60,11 +60,19 @@ class CheckerGUI:
         if piece in [1, 2, 3, 4]:  # **确保选中的棋子有效**
             self.selected_piece = (row, col)
 
-            # **只获取当前选中棋子的所有合法目标位置**
-            self.valid_destinations = [
-                move[2:4] for move in self.env.valid_moves(self.current_player)
-                if move[:2] == [row, col]
-            ]
+            # **获取所有合法移动**
+            all_valid_moves = self.env.valid_moves(self.current_player)
+            jump_moves = [move for move in all_valid_moves if abs(move[2] - move[0]) == 2]  # 吃子必须跳±2
+
+            # **王棋的合法移动**
+            king_moves = [move for move in all_valid_moves if piece in [3, 4]]
+
+            if jump_moves:
+                self.valid_destinations = [move[2:4] for move in jump_moves if move[:2] == [row, col]]
+            elif king_moves:
+                self.valid_destinations = [move[2:4] for move in king_moves if move[:2] == [row, col]]
+            else:
+                self.valid_destinations = [move[2:4] for move in all_valid_moves if move[:2] == [row, col]]
 
             print(f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")
 
@@ -77,20 +85,34 @@ class CheckerGUI:
             start_row, start_col = self.selected_piece
             end_row, end_col = event.y // self.cell_size, event.x // self.cell_size
             action = [start_row, start_col, end_row, end_col]
-            if action in self.env.valid_moves(self.current_player):
+
+            valid_moves = self.env.valid_moves(self.current_player)
+
+            if action in valid_moves:
                 self.history.append((self.env.board.copy(), self.current_player))
                 self.env.step(action, self.current_player)
-                self.current_player = 2 if self.current_player == 1 else 1
+
+                # **检查是否可以继续连跳**
+                additional_jumps = [
+                    move for move in self.env.valid_moves(self.current_player)
+                    if move[:2] == [end_row, end_col] and abs(move[2] - move[0]) == 2
+                ]
+
+                if additional_jumps:
+                    self.selected_piece = (end_row, end_col)  # **保持当前棋子选中**
+                    self.valid_destinations = [move[2:4] for move in additional_jumps]
+                    print(f"Forced multi-jump available: {self.valid_destinations}")
+                else:
+                    self.current_player = 2 if self.current_player == 1 else 1  # **换玩家**
+                    self.selected_piece = None  # **取消选中**
+                    self.valid_destinations = []  # **清空高亮**
+
                 self.render_board()
                 self.check_winner()
 
-                # 如果轮到AI，自动执行AI的回合
+                # 如果轮到 AI，自动执行 AI 的回合
                 if self.current_player == 2:
                     self.ai_move()
-
-            self.selected_piece = None
-
-
 
     def regret_move(self):
         """撤销上一步移动"""
@@ -132,9 +154,9 @@ class CheckerGUI:
                 elif piece == 2:
                     self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="red")
                 elif piece == 3:
-                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="black", outline="gold", width=3)
+                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="black", outline="gold", width=5)
                 elif piece == 4:
-                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="red", outline="gold", width=3)
+                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="red", outline="gold", width=5)
 
     def reset_game(self):
         """重置游戏"""
@@ -153,19 +175,28 @@ class CheckerGUI:
             self.root.quit()
 
     def ai_move(self):
-        """让AI执行回合"""
-        if self.current_player == 2:
+        """让 AI 执行回合"""
+        while self.current_player == 2:  # **AI 需要连跳**
             action = self.agent.choose_action(self.env.board)
             if action is not None:
                 self.history.append((self.env.board.copy(), self.current_player))
                 self.env.step(action, self.current_player)
-                self.current_player = 1  # 轮到玩家
                 self.render_board()
                 self.check_winner()
+
+                # **检查 AI 是否可以继续吃子**
+                additional_jumps = [
+                    move for move in self.env.valid_moves(self.current_player)
+                    if move[:2] == action[2:4] and abs(move[2] - move[0]) == 2
+                ]
+
+                if not additional_jumps:
+                    self.current_player = 1  # **结束 AI 回合**
             else:
                 # AI 无法移动，游戏可能结束
                 winner = self.env.game_winner()
                 if winner is not None:
                     messagebox.showinfo("Game Over", f"Player {winner} Wins!")
                     self.root.quit()
+
 

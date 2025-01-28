@@ -82,12 +82,11 @@ class CheckersEnv:
         """确保吃子时必须跳过相邻的对方棋子"""
         start_row, start_col, end_row, end_col = action
 
-        if abs(end_row - start_row) == 2 and abs(end_col - start_col) == 2:
+        if (end_row - start_row, end_col - start_col) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]:  # **严格限制普通棋子**
             mid_row = (start_row + end_row) // 2
             mid_col = (start_col + end_col) // 2
 
-            # **修正：确保中间位置是相邻的对方棋子**
-            if self.board[mid_row, mid_col] in [3 - player, (3 - player) + 2]:
+            if self.board[mid_row, mid_col] in [3 - player, (3 - player) + 2]:  # **确保跳过的是对方棋子**
                 self.board[mid_row, mid_col] = 0  # **移除被吃掉的棋子**
 
     def promote_to_king(self):
