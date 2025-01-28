@@ -53,12 +53,19 @@ class CheckerGUI:
         self.canvas.bind("<ButtonRelease-1>", self.on_piece_release)
 
     def on_piece_press(self, event):
-        """处理棋子按下事件"""
+        """处理棋子按下事件，并高亮合法移动位置"""
         col, row = event.x // self.cell_size, event.y // self.cell_size
         if self.env.board[row, col] == self.current_player:
-            valid_moves = self.env.valid_moves(self.current_player)
-            print(f"Valid moves for player {self.current_player}: {valid_moves}")  # 调试代码
             self.selected_piece = (row, col)
+
+            # 记录当前棋子的合法目标位置
+            self.valid_destinations = [move[2:4] for move in self.env.valid_moves(self.current_player) if
+                                       move[:2] == [row, col]]
+
+            print(
+                f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")  # 调试信息
+
+            self.render_board()  # 重新渲染棋盘，确保高亮可移动位置
 
     def on_piece_release(self, event):
         """处理棋子释放事件并执行移动"""
@@ -102,14 +109,20 @@ class CheckerGUI:
         self.reset_game()
 
     def render_board(self):
-        """渲染棋盘"""
+        """渲染棋盘，并高亮当前选中棋子的合法移动位置"""
         self.canvas.delete("all")
         for row in range(self.board_size):
             for col in range(self.board_size):
                 x0, y0 = col * self.cell_size, row * self.cell_size
                 x1, y1 = x0 + self.cell_size, y0 + self.cell_size
                 color = "#D0E4C8" if (row + col) % 2 == 0 else "#F0F5F1"
+
+                # 如果是合法移动位置，高亮显示
+                if (row, col) in self.valid_destinations:
+                    color = "#B0E57C"  # 绿色代表可移动位置
+
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="black")
+
                 piece = self.env.board[row, col]
                 if piece == 1:
                     self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="black")
