@@ -55,17 +55,20 @@ class CheckerGUI:
     def on_piece_press(self, event):
         """处理棋子按下事件，并高亮合法移动位置"""
         col, row = event.x // self.cell_size, event.y // self.cell_size
-        if self.env.board[row, col] == self.current_player:
+        piece = self.env.board[row, col]
+
+        if piece in [1, 2, 3, 4]:  # **确保选中的棋子有效**
             self.selected_piece = (row, col)
 
-            # 记录当前棋子的合法目标位置
-            self.valid_destinations = [move[2:4] for move in self.env.valid_moves(self.current_player) if
-                                       move[:2] == [row, col]]
+            # **只获取当前选中棋子的所有合法目标位置**
+            self.valid_destinations = [
+                move[2:4] for move in self.env.valid_moves(self.current_player)
+                if move[:2] == [row, col]
+            ]
 
-            print(
-                f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")  # 调试信息
+            print(f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")
 
-            self.render_board()  # 重新渲染棋盘，确保高亮可移动位置
+            self.render_board()  # **重新渲染棋盘，确保高亮可移动位置**
 
     def on_piece_release(self, event):
         """处理棋子释放事件并执行移动"""

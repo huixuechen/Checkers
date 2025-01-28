@@ -30,34 +30,51 @@ class CheckersEnv:
         moves = []
         jump_moves = []
         forward_directions = [(-1, -1), (-1, 1)] if player == 1 else [(1, -1), (1, 1)]
-        king_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        king_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]  # **王棋可以四向移动**
 
         for row in range(self.board_size):
             for col in range(self.board_size):
                 piece = self.board[row, col]
 
-                if piece == player or piece == player + 2:  # 普通棋子 或 王棋
+                if piece == player or piece == player + 2:  # **普通棋子 或 王棋**
                     piece_directions = king_directions if piece in [3, 4] else forward_directions
 
+                    # **检查普通移动**
                     for dr, dc in piece_directions:
                         new_row, new_col = row + dr, col + dc
                         if 0 <= new_row < self.board_size and 0 <= new_col < self.board_size:
                             if self.board[new_row, new_col] == 0:
                                 moves.append([row, col, new_row, new_col])
 
-                        cap_row, cap_col = row + dr, col + dc
-                        end_row, end_col = row + 2 * dr, col + 2 * dc
+                    # **检查吃子 (普通棋子必须严格跳±2)**
+                    for dr, dc in piece_directions:
+                        cap_row, cap_col = row + dr, col + dc  # 被跳过的棋子
+                        end_row, end_col = row + 2 * dr, col + 2 * dc  # 落点
 
-                        # **修正：只允许相邻吃子**
+                        # **确保普通棋子只能吃相邻棋子，且坐标变化必须是 (±2, ±2)**
                         if (
                                 0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
                                 0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
-                                self.board[cap_row, cap_col] in [3 - player, (3 - player) + 2] and
-                                self.board[end_row, end_col] == 0 and
-                                (piece in [3, 4] or (abs(cap_row - row) == 1 and abs(cap_col - col) == 1))
-                        # **王棋不受相邻限制**
+                                self.board[cap_row, cap_col] in [3 - player, (3 - player) + 2] and  # **确保中间有对方棋子**
+                                self.board[end_row, end_col] == 0 and  # **落点必须为空**
+                                (end_row - row, end_col - col) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]  # **普通棋子严格限制跳跃**
                         ):
                             jump_moves.append([row, col, end_row, end_col])
+
+                    # **王棋允许长距离跳跃吃子**
+                    if piece in [3, 4]:
+                        for dr, dc in king_directions:
+                            temp_row, temp_col = row + dr, col + dc
+                            captured = False  # **确保王棋必须跳过棋子**
+                            while 0 <= temp_row < self.board_size and 0 <= temp_col < self.board_size:
+                                if self.board[temp_row, temp_col] in [3 - player, (3 - player) + 2]:
+                                    captured = True  # **标记王棋吃子**
+                                elif self.board[temp_row, temp_col] == 0 and captured:
+                                    jump_moves.append([row, col, temp_row, temp_col])
+                                else:
+                                    break
+                                temp_row += dr
+                                temp_col += dc
 
         return jump_moves if jump_moves else moves  # **强制吃子规则**
 
