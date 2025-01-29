@@ -103,39 +103,39 @@ class CheckersEnv:
                 self.board[self.board_size - 1, col] = 4  # **升级为王棋**
 
     def step(self, action, player):
-        """执行一步棋，并返回新状态"""
+        """Execute a move and return the new state"""
         start_row, start_col, end_row, end_col = action
         self.board[end_row, end_col] = self.board[start_row, start_col]
         self.board[start_row, start_col] = 0
 
-        is_jump = abs(end_row - start_row) == 2  # **判断是否是跳跃**
+        is_jump = abs(end_row - start_row) == 2  # **Check if it's a jump**
 
         if is_jump:
-            self.capture_piece(action, player)  # **移除被吃掉的棋子**
+            self.capture_piece(action, player)  # **Remove the captured piece**
             additional_jumps = self.get_additional_jumps(end_row, end_col, player)
 
             if additional_jumps:
-                self.must_jump = True  # **如果有连跳机会，必须继续吃子**
-                return self.board.copy(), 1, False  # **当前玩家继续回合**
+                self.must_jump = True  # **Must continue jumping if possible**
+                return self.board.copy(), 1, False  # **Current player continues turn**
             else:
-                self.must_jump = False  # **没有更多吃子，换回合**
+                self.must_jump = False  # **No more jumps, switch turn**
         else:
             if self.must_jump:
-                # **如果当前回合已经跳跃过，不允许普通移动**
+                # **If a jump was made earlier, normal moves are not allowed**
                 return self.board.copy(), 0, False
 
-            self.must_jump = False  # **普通移动后，不允许再吃子**
+            self.must_jump = False  # **After a normal move, no more jumps allowed**
 
-        self.promote_to_king()
+        self.promote_to_king()  # **Promote pieces to king if they reach the opposite end**
 
-        reward = 1 if is_jump else 0  # **普通移动不给奖励**
+        reward = 1 if is_jump else 0  # **No reward for normal moves**
         winner = self.game_winner()
         done = winner is not None
 
         if done:
-            reward = 10 if winner == player else -10  # **正确给予奖励**
+            reward = 10 if winner == player else -10  # **Correctly assign reward**
         else:
-            self.player = 1 if player == 2 else 2  # **切换玩家**
+            self.player = 1 if player == 2 else 2  # **Switch player**
 
         return self.board.copy(), reward, done
 

@@ -81,7 +81,7 @@ class CheckerGUI:
             self.render_board()  # **重新渲染棋盘，确保高亮可移动位置**
 
     def on_piece_release(self, event):
-        """处理棋子释放事件并执行移动"""
+        """Handle piece release event and execute the move"""
 
         if self.selected_piece:
             start_row, start_col = self.selected_piece
@@ -94,25 +94,31 @@ class CheckerGUI:
                 self.history.append((self.env.board.copy(), self.current_player))
                 self.env.step(action, self.current_player)
 
-                # **检查是否可以继续连跳**
-                additional_jumps = [
-                    move for move in self.env.valid_moves(self.current_player)
-                    if move[:2] == [end_row, end_col] and abs(move[2] - move[0]) == 2
-                ]
+                # Check if the move was a capture
+                if abs(end_row - start_row) == 2:
+                    # Check for additional jumps
+                    additional_jumps = [
+                        move for move in self.env.valid_moves(self.current_player)
+                        if move[:2] == [end_row, end_col] and abs(move[2] - move[0]) == 2
+                    ]
 
-                if additional_jumps:
-                    self.selected_piece = (end_row, end_col)  # **保持当前棋子选中**
-                    self.valid_destinations = [move[2:4] for move in additional_jumps]
-                    print(f"Forced multi-jump available: {self.valid_destinations}")
+                    if additional_jumps:
+                        self.selected_piece = (end_row, end_col)  # Keep the current piece selected
+                        self.valid_destinations = [move[2:4] for move in additional_jumps]
+                        print(f"Forced multi-jump available: {self.valid_destinations}")
+                    else:
+                        self.current_player = 2 if self.current_player == 1 else 1  # Switch player
+                        self.selected_piece = None  # Deselect piece
+                        self.valid_destinations = []  # Clear highlights
                 else:
-                    self.current_player = 2 if self.current_player == 1 else 1  # **换玩家**
-                    self.selected_piece = None  # **取消选中**
-                    self.valid_destinations = []  # **清空高亮**
+                    self.current_player = 2 if self.current_player == 1 else 1  # Switch player
+                    self.selected_piece = None  # Deselect piece
+                    self.valid_destinations = []  # Clear highlights
 
                 self.render_board()
                 self.check_winner()
 
-                # 如果轮到 AI，自动执行 AI 的回合
+                # If it's AI's turn, let the AI make a move
                 if self.current_player == 2:
                     self.ai_move()
 
