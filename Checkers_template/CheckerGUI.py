@@ -62,16 +62,18 @@ class CheckerGUI:
 
             # **获取所有合法移动**
             all_valid_moves = self.env.valid_moves(self.current_player)
-            jump_moves = [move for move in all_valid_moves if abs(move[2] - move[0]) == 2]  # 吃子必须跳±2
 
-            # **王棋的合法移动**
-            king_moves = [move for move in all_valid_moves if piece in [3, 4]]
+            # **区分普通棋子和王棋的移动**
+            jump_moves = [move for move in all_valid_moves if abs(move[2] - move[0]) == 2]  # 普通吃子
+            king_jump_moves = [move for move in all_valid_moves if
+                               piece in [3, 4] and abs(move[2] - move[0]) > 2]  # 王棋远跳
 
-            if jump_moves:
+            # **高亮规则**
+            if jump_moves:  # **如果有吃子选项，必须吃子**
                 self.valid_destinations = [move[2:4] for move in jump_moves if move[:2] == [row, col]]
-            elif king_moves:
-                self.valid_destinations = [move[2:4] for move in king_moves if move[:2] == [row, col]]
-            else:
+            elif king_jump_moves:  # **王棋的长距离跳跃**
+                self.valid_destinations = [move[2:4] for move in king_jump_moves if move[:2] == [row, col]]
+            else:  # **普通移动**
                 self.valid_destinations = [move[2:4] for move in all_valid_moves if move[:2] == [row, col]]
 
             print(f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")
@@ -136,23 +138,28 @@ class CheckerGUI:
     def render_board(self):
         """渲染棋盘，并高亮当前选中棋子的合法移动位置"""
         self.canvas.delete("all")
+
         for row in range(self.board_size):
             for col in range(self.board_size):
                 x0, y0 = col * self.cell_size, row * self.cell_size
                 x1, y1 = x0 + self.cell_size, y0 + self.cell_size
                 color = "#D0E4C8" if (row + col) % 2 == 0 else "#F0F5F1"
 
-                # 如果是合法移动位置，高亮显示
+                # **高亮棋子可移动的位置**
                 if (row, col) in self.valid_destinations:
-                    color = "#B0E57C"  # 绿色代表可移动位置
+                    color = "#B0E57C"  # 绿色表示棋子可以移动的位置
+
+                # **高亮选中的棋子**
+                if self.selected_piece == (row, col):
+                    color = "#FFD700"  # 金色表示当前选中的棋子
 
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="black")
 
                 piece = self.env.board[row, col]
                 if piece == 1:
-                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="black")
+                    self.canvas.create_oval(x0 + 8, y0 + 8, x1 - 8, y1 - 8, fill="black")
                 elif piece == 2:
-                    self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="red")
+                    self.canvas.create_oval(x0 + 8, y0 + 8, x1 - 8, y1 - 8, fill="red")
                 elif piece == 3:
                     self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="black", outline="gold", width=5)
                 elif piece == 4:
