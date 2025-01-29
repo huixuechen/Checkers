@@ -102,21 +102,23 @@ class CheckersEnv:
         start_row, start_col, end_row, end_col = action
         self.board[end_row, end_col] = self.board[start_row, start_col]
         self.board[start_row, start_col] = 0
-        self.capture_piece(action, player)  # **修正：确保正确的吃子逻辑**
 
-        # **修正：确保连跳生效**
-        self.handle_multiple_jumps(end_row, end_col, player)
+        is_jump = abs(end_row - start_row) == 2  # **判断是否是跳跃**
+
+        if is_jump:
+            self.capture_piece(action, player)  # **只有跳跃时才吃子**
+            self.handle_multiple_jumps(end_row, end_col, player)  # **如果跳跃，才检查连跳**
 
         self.promote_to_king()
 
-        reward = 1 if abs(end_row - start_row) == 2 else 0
+        reward = 1 if is_jump else 0  # **普通移动不给奖励**
         winner = self.game_winner()
         done = winner is not None
 
         if done:
             reward = 10 if winner == player else -10  # **正确给予奖励**
         else:
-            self.player = 1 if player == 2 else 2  # **正确切换玩家**
+            self.player = 1 if player == 2 else 2  # **切换玩家**
 
         return self.board.copy(), reward, done
 

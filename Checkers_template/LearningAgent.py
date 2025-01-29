@@ -14,7 +14,7 @@ class QLearningAgent:
         self.exploration_log = []
         self.visits = defaultdict(int)
 
-        # Set difficulty based on the provided difficulty level
+        # 设置难度
         self.set_difficulty(self.difficulty)
 
     def set_difficulty(self, difficulty):
@@ -38,51 +38,39 @@ class QLearningAgent:
             raise ValueError("Invalid difficulty level. Choose 'easy', 'medium', or 'hard'.")
         self.min_exploration_rate = 0.05
 
+    import numpy as np
+    import random
+
     def choose_action(self, state, use_ucb=False):
         valid_moves = self.env.valid_moves(self.player)
 
-        # 🔥 确保 AI 不能执行 invalid move
-        print(f"AI Player {self.player} Valid Moves: {valid_moves}")
-
         if not valid_moves:
-            print(f"AI Player {self.player} has no valid moves.")
             return None  # 没有合法移动
 
         state_hash = self.state_to_hash(state)
         self.visits[state_hash] += 1  # 记录访问次数
 
-        # 🔥 确保 AI 只从 valid_moves 选择动作
+        # **1. 先分类普通移动和跳跃**
+        jump_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 2]  # 只能跳跃相邻棋子
+        normal_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 1]  # 普通移动只能前进一步
+
         action = None
 
-        # **1. 尝试从相似状态学习**
-        similar_state = self.task_similarity.find_similar_state(state)
-        if similar_state:
-            best_action = self.task_similarity.get_best_action(similar_state, valid_moves)
-            if best_action and best_action in valid_moves:  # 确保合法
-                print(f"AI chooses from similar state: {best_action}")
-                action = best_action
+        # **2. 强制 AI 先跳跃**
+        if jump_moves:
+            print(f"⚠️ AI Player {self.player} must jump: {jump_moves}")
+            action = random.choice(jump_moves)  # **必须先吃子**
 
-        # **2. 探索模式 (随机选择)**
-        if action is None and random.uniform(0, 1) < self.exploration_rate:
-            self.exploration_log.append("explore")
-            action = random.choice(valid_moves)
-            print(f"AI explores and picks: {action}")
+        else:  # **只有当没有跳跃时，才允许普通移动**
+            # **严格限制普通移动只能前进一步**
+            if normal_moves:
+                print(f"✅ AI Player {self.player} performs normal move: {normal_moves}")
+                action = random.choice(normal_moves)  # **只能移动 1 步**
 
-        # **3. UCB 选择 (增强版)**
-        if action is None and use_ucb:
-            self.exploration_log.append("ucb")
-            action = self.select_ucb_action(state, valid_moves)
-            print(f"AI uses UCB and picks: {action}")
+            else:
+                return None  # **如果没有可用的普通移动，也不能乱选**
 
-        # **4. 直接利用 Q 值**
-        if action is None:
-            self.exploration_log.append("exploit")
-            q_values = self.q_table[state_hash]
-            best_index = np.argmax(q_values[:len(valid_moves)])
-            action = valid_moves[best_index]
-            print(f"AI chooses best Q-value action: {action}")
-
-        # 🔥 确保最终 action 一定在 valid_moves 里
+        # **最终安全检查**
         if action not in valid_moves:
             print(f"⚠️ AI picked an invalid move {action}, forcing a random valid move!")
             action = random.choice(valid_moves)
@@ -92,7 +80,7 @@ class QLearningAgent:
     def learn(self, state, action, reward, next_state):
         valid_moves = self.env.valid_moves(self.player)
         if not valid_moves or action not in valid_moves:
-            return  # **确保 AI 只学习合法的动作**
+            return
 
         state_hash = self.state_to_hash(state)
         next_state_hash = self.state_to_hash(next_state)
@@ -102,12 +90,12 @@ class QLearningAgent:
         if len(valid_moves) > 0 and state_hash not in self.q_table:
             self.q_table[state_hash] = np.full(len(valid_moves), -1.0)
 
-        best_next_action = np.argmax(self.q_table[next_state_hash][:len(valid_moves)])  # **防止超出索引**
+        best_next_action = np.argmax(self.q_table[next_state_hash][:len(valid_moves)])
         td_target = reward + self.discount_factor * self.q_table[next_state_hash][best_next_action]
         td_error = td_target - self.q_table[state_hash][action_index]
 
         self.q_table[state_hash][action_index] += self.learning_rate * td_error
-        self.task_similarity.store_state(state, action)  # Store learned state-action pairs
+        self.task_similarity.store_state(state, action)
 
     def state_to_hash(self, state):
         return hash(tuple(state.flatten())) if state is not None else 0
@@ -126,7 +114,7 @@ class QLearningAgent:
             ucb_value = q_value + 2 * np.sqrt(np.log(total_visits) / visit_count)
             ucb_values.append(ucb_value)
 
-        return valid_moves[np.argmax(ucb_values)]  # **确保 UCB 选择的动作也是合法的**
+        return valid_moves[np.argmax(ucb_values)]
 
     def save_q_table(self, filepath):
         with open(filepath, "wb") as f:
