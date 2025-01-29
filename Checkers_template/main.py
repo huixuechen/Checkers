@@ -25,20 +25,22 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
                 break  # 没有合法移动，结束游戏
 
             next_state, raw_reward, done = env.step(action, env.player)
-
-            # 计算奖励
-            if done and env.game_winner() == 1:
-                reward = 100  # AI1 获胜
-                win_history.append(1)  # 记录胜利
-            elif done and env.game_winner() == 2:
-                reward = -50  # AI2 获胜
-                win_history.append(0)  # 记录失败
-            else:
-                reward = raw_reward  # 正常奖励
+            reward = raw_reward
+            if done:
+                winner = env.game_winner()
+                if winner == 1:
+                    reward = 100
+                    win_history.append(1)
+                elif winner == 2:
+                    reward = -50
+                    win_history.append(0)
+                else:
+                    reward = 0
+                    win_history.append(0.5)
 
             current_agent.learn(state, action, reward, next_state)
             state = next_state
-            episode_reward += reward  # 累计当前回合奖励
+            episode_reward += reward
             agent1.update_exploration_rate()
             agent2.update_exploration_rate()
 
@@ -51,7 +53,7 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
     return total_rewards, win_history, dict(agent1.q_table)  # **确保返回3个值**
 
 
-def plot_training_results(total_rewards, window_size=100):
+def plot_training_results(total_rewards, window_size=200):
     """优化训练奖励的可视化"""
     plt.figure(figsize=(10, 5))
 
@@ -62,7 +64,7 @@ def plot_training_results(total_rewards, window_size=100):
     plt.plot(smoothed_rewards, label=f"Smoothed (window={window_size})", color='blue', linewidth=2)
 
     # 仅每 100 个回合采样一个点，减少点的密集度
-    sampled_episodes = np.arange(window_size - 1, len(total_rewards), 100)
+    sampled_episodes = np.arange(window_size - 1, len(total_rewards), 200)
     sampled_rewards = [np.mean(total_rewards[max(0, i - window_size):i]) for i in sampled_episodes]
     plt.scatter(sampled_episodes, sampled_rewards, color='red', s=5, label="Sampled Points")
 
@@ -75,8 +77,12 @@ def plot_training_results(total_rewards, window_size=100):
 
     plt.show()
 
-def plot_win_rate(win_history, window_size=100):
+def plot_win_rate(win_history, window_size=200):
     """绘制 AI 的胜率随时间变化的曲线"""
+    if not win_history:
+        print("⚠️ win_history is empty! No win rate to plot.")
+        return
+
     plt.figure(figsize=(10, 5))
 
     # 计算滑动平均胜率
@@ -90,6 +96,7 @@ def plot_win_rate(win_history, window_size=100):
     plt.grid(True)
 
     plt.show()
+
 
 def plot_q_values(q_table):
     """绘制 Q 值分布"""
@@ -153,18 +160,18 @@ def compare_ai_performance(env, agent_before, agent_after, num_games=100):
 if __name__ == "__main__":
     # Run the game GUI
     root = tk.Tk()
-    gui = CheckerGUI(root, difficulty='easy')  # Change difficulty here
+    gui = CheckerGUI(root, difficulty='medium')  # Change difficulty here
     root.mainloop()
 
     # 初始化 AI 并训练
-    env = CheckersEnv(board_size=6)
+    env = CheckersEnv(board_size=8)
     difficulty = "medium"  # 选择训练难度
     agent1 = QLearningAgent(env, player=1, difficulty="easy")  # AI Player 1
     agent2 = QLearningAgent(env, player=2, difficulty="medium")  # AI Player 2
     total_rewards, win_history, _ = train_agent(env, agent1, agent2, num_episodes=10000)
 
-
     agent1.save_q_table(agent1.q_table_file)
+
     agent2.save_q_table(agent2.q_table_file)
 
 

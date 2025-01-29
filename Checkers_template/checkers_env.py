@@ -2,9 +2,11 @@ import numpy as np
 
 class CheckersEnv:
     def __init__(self, board_size=8, player=1):
+        self.must_jump = False
         self.board_size = board_size  # 6x6 或 8x8 棋盘
         self.board = self.initialize_board()
         self.player = player
+        self.last_move_was_jump = False
 
     def initialize_board(self):
         """初始化棋盘"""
@@ -106,8 +108,20 @@ class CheckersEnv:
         is_jump = abs(end_row - start_row) == 2  # **判断是否是跳跃**
 
         if is_jump:
-            self.capture_piece(action, player)  # **只有跳跃时才吃子**
-            self.handle_multiple_jumps(end_row, end_col, player)  # **如果跳跃，才检查连跳**
+            self.capture_piece(action, player)  # **移除被吃掉的棋子**
+            additional_jumps = self.get_additional_jumps(end_row, end_col, player)
+
+            if additional_jumps:
+                self.must_jump = True  # **如果有连跳机会，必须继续吃子**
+                return self.board.copy(), 1, False  # **当前玩家继续回合**
+            else:
+                self.must_jump = False  # **没有更多吃子，换回合**
+        else:
+            if self.must_jump:
+                # **如果当前回合已经跳跃过，不允许普通移动**
+                return self.board.copy(), 0, False
+
+            self.must_jump = False  # **普通移动后，不允许再吃子**
 
         self.promote_to_king()
 
