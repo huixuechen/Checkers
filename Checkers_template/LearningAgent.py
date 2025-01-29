@@ -2,6 +2,8 @@ import numpy as np
 import random
 from collections import defaultdict
 from TaskSimilarity import TaskSimilarity
+import json
+import os
 
 class QLearningAgent:
     def __init__(self, env, player, board_size=6, difficulty='easy'):
@@ -20,26 +22,36 @@ class QLearningAgent:
     def set_difficulty(self, difficulty):
         difficulty = difficulty.lower()
         if difficulty == "easy":
-            self.learning_rate = 0.05
-            self.discount_factor = 0.5
+            self.learning_rate = 0.1
+            self.discount_factor = 0.6
             self.exploration_rate = 0.9
             self.exploration_decay = 0.995
+            self.attack_bonus = 20
+
         elif difficulty == "medium":
-            self.learning_rate = 0.1
-            self.discount_factor = 0.7
-            self.exploration_rate = 0.5
+            self.learning_rate = 0.15
+            self.discount_factor = 0.75
+            self.exploration_rate = 0.7
             self.exploration_decay = 0.99
+            self.attack_bonus = 30
+
         elif difficulty == "hard":
-            self.learning_rate = 0.2
+            self.learning_rate = 0.25
             self.discount_factor = 0.9
-            self.exploration_rate = 0.2
+            self.exploration_rate = 0.5
             self.exploration_decay = 0.995
+            self.attack_bonus = 50
         else:
             raise ValueError("Invalid difficulty level. Choose 'easy', 'medium', or 'hard'.")
-        self.min_exploration_rate = 0.05
 
-    import numpy as np
-    import random
+        self.min_exploration_rate = 0.1
+
+        self.q_table_file = f"q_table_{difficulty}.json"
+
+
+        self.load_q_table(self.q_table_file)
+
+
 
     def choose_action(self, state, use_ucb=False):
         valid_moves = self.env.valid_moves(self.player)
@@ -78,24 +90,46 @@ class QLearningAgent:
         return action
 
     def learn(self, state, action, reward, next_state):
+        """更新 Q 表并存储任务相似性"""
         valid_moves = self.env.valid_moves(self.player)
         if not valid_moves or action not in valid_moves:
-            return
+            return  # 没有合法移动，直接返回
 
         state_hash = self.state_to_hash(state)
         next_state_hash = self.state_to_hash(next_state)
-        action_index = valid_moves.index(action)
 
-        # **防止访问越界**
-        if len(valid_moves) > 0 and state_hash not in self.q_table:
-            self.q_table[state_hash] = np.full(len(valid_moves), -1.0)
+        # **确保 Q-table 初始化**
+        if state_hash not in self.q_table:
+            self.q_table[state_hash] = np.full(len(valid_moves), -1.0)  # 仍然使用 -1.0 作为初始值
 
-        best_next_action = np.argmax(self.q_table[next_state_hash][:len(valid_moves)])
+        if next_state_hash not in self.q_table:
+            self.q_table[next_state_hash] = np.zeros(len(valid_moves))  # 初始化 Q 值
+
+        try:
+            action_index = valid_moves.index(action)
+        except ValueError:
+            print(f"⚠️ Action {action} not found in valid_moves: {valid_moves}")
+            return  # **如果动作无效，直接返回**
+
+        # **获取最佳下一步动作**
+        if len(self.q_table[next_state_hash]) > 0:  # **确保 next_state_hash 有数据**
+            best_next_action = np.argmax(self.q_table[next_state_hash])
+        else:
+            best_next_action = 0  # **如果 `q_table[next_state_hash]` 为空，默认 0**
+
+        # **TD 目标计算**
         td_target = reward + self.discount_factor * self.q_table[next_state_hash][best_next_action]
         td_error = td_target - self.q_table[state_hash][action_index]
+        self.q_table[state_hash][action_index] += self.learning_rate * td_error  # **更新 Q 值**
 
-        self.q_table[state_hash][action_index] += self.learning_rate * td_error
-        self.task_similarity.store_state(state, action)
+        # **打印调试信息**
+        print(
+            f"Updated Q-table: {state_hash} | Action {action} | New Q-value: {self.q_table[state_hash][action_index]}")
+
+        try:
+            self.task_similarity.store_state(state, action)  # **存储任务相似性**
+        except Exception as e:
+            print(f"⚠️ Error storing state in task_similarity: {e}")
 
     def state_to_hash(self, state):
         return hash(tuple(state.flatten())) if state is not None else 0
@@ -117,10 +151,35 @@ class QLearningAgent:
         return valid_moves[np.argmax(ucb_values)]
 
     def save_q_table(self, filepath):
-        with open(filepath, "wb") as f:
-            np.save(f, dict(self.q_table))
+        """使用 JSON 存储 Q-table"""
+        q_table_dict = {str(state): q_values.tolist() for state, q_values in self.q_table.items()}  # 转换 JSON 格式
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(q_table_dict, f, indent=4)  # **格式化存储，方便手动修改**
+        print(f"✅ Q-table saved to {filepath}")
 
     def load_q_table(self, filepath):
-        with open(filepath, "rb") as f:
-            loaded_q_table = np.load(f, allow_pickle=True).item()
-            self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])), loaded_q_table)
+        """从 JSON 加载 Q-table，如果文件不存在，则创建一个空白 Q-table"""
+        if not os.path.exists(filepath):
+            print(f"⚠️ Q-table file not found ({filepath}), creating a new empty Q-table.")
+            self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
+            self.save_q_table(filepath)  # **创建空白 Q-table 并保存**
+            return
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                loaded_q_table = json.load(f)
+
+            # 还原 Q-table
+            self.q_table = defaultdict(
+                lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])),
+                {int(state): np.array(q_values) for state, q_values in loaded_q_table.items()},
+            )
+            print(f"✅ Q-table loaded from {filepath}")
+        except json.JSONDecodeError:
+            print("❌ Error: Invalid JSON format! Please check the Q-table file.")
+            self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
+
+    def update_exploration_rate(self):
+        """更新探索率，防止探索率降到 0"""
+        self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay)

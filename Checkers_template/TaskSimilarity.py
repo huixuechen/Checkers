@@ -13,27 +13,40 @@ class TaskSimilarity:
     def store_state(self, state, action):
         """存储某个状态的最佳行动"""
         state_hash = self.state_to_hash(state)
+        state_bytes = state.tobytes()  # **存储完整的二进制棋盘数据**
+
         if state_hash in self.state_memory:
             self.state_memory[state_hash]['count'] += 1  # 增加访问次数
         else:
-            self.state_memory[state_hash] = {'action': action, 'count': 1}  # 初始化存储
+            self.state_memory[state_hash] = {
+                'action': action,
+                'count': 1,
+                'state': state_bytes  # **存完整的棋盘状态**
+            }
 
     def find_similar_state(self, state):
         """查找最相近的已存储状态"""
+        state_bytes = state.tobytes()
         state_hash = self.state_to_hash(state)
+
         if state_hash in self.state_memory:
             return state_hash  # 直接返回匹配的哈希值
 
-        # 尝试找到相似的状态（这里可以使用更复杂的搜索算法）
-        for stored_hash in self.state_memory:
-            similarity = self.compute_state_similarity(state, stored_hash)
+        # **尝试找到最相近的状态**
+        for stored_hash, stored_data in self.state_memory.items():
+            similarity = self.compute_state_similarity(state_bytes, stored_data['state'])
             if similarity > self.similarity_threshold:
                 return stored_hash
         return None
 
-    def compute_state_similarity(self, state, stored_hash):
-        """计算状态相似性（简单实现）"""
-        stored_state = np.frombuffer(stored_hash, dtype=state.dtype).reshape(state.shape)
+    def compute_state_similarity(self, state_bytes, stored_bytes):
+        """计算状态相似性（修正实现）"""
+        stored_state = np.frombuffer(stored_bytes, dtype=np.int8)  # **从字节数据转换回数组**
+        state = np.frombuffer(state_bytes, dtype=np.int8)
+
+        if state.shape != stored_state.shape:
+            return 0  # **形状不匹配，直接返回 0**
+
         matching_cells = np.sum(state == stored_state)
         return matching_cells / state.size  # 计算相似度比例
 
