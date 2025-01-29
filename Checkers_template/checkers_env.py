@@ -2,6 +2,7 @@ import numpy as np
 
 class CheckersEnv:
     def __init__(self, board_size=8, player=1):
+        self.has_moved = False
         self.must_jump = False
         self.board_size = board_size  # 6x6 或 8x8 棋盘
         self.board = self.initialize_board()
@@ -77,6 +78,8 @@ class CheckersEnv:
                                     break
                                 temp_row += dr
                                 temp_col += dc
+            if moves and not jump_moves:
+                self.has_moved = True
 
         return jump_moves if jump_moves else moves  # **强制吃子规则**
 

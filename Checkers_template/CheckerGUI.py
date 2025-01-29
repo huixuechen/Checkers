@@ -190,8 +190,12 @@ class CheckerGUI:
                 self.env.step(action, self.current_player)
                 self.render_board()
                 self.check_winner()
+                if self.env.has_moved:  # **如果 AI 已经执行普通移动，直接结束回合**
+                    print(f"⚠️ AI Player {self.current_player} has already moved. Skipping turn.")
+                    self.current_player = 1  # **切换回合**
+                    return
 
-                # **检查 AI 是否可以继续吃子**
+                    # **检查 AI 是否可以继续吃子**
                 additional_jumps = [
                     move for move in self.env.valid_moves(self.current_player)
                     if move[:2] == action[2:4] and abs(move[2] - move[0]) == 2
