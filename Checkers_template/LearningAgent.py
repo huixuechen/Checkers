@@ -15,8 +15,6 @@ class QLearningAgent:
         self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
         self.exploration_log = []
         self.visits = defaultdict(int)
-
-        # 设置难度
         self.set_difficulty(self.difficulty)
 
     def set_difficulty(self, difficulty):
@@ -57,32 +55,29 @@ class QLearningAgent:
         valid_moves = self.env.valid_moves(self.player)
 
         if not valid_moves:
-            return None  # 没有合法移动
+            return None
 
         state_hash = self.state_to_hash(state)
-        self.visits[state_hash] += 1  # 记录访问次数
+        self.visits[state_hash] += 1
 
-        # **1. 先分类普通移动和跳跃**
-        jump_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 2]  # 只能跳跃相邻棋子
-        normal_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 1]  # 普通移动只能前进一步
+
+        jump_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 2]
+        normal_moves = [move for move in valid_moves if abs(move[2] - move[0]) == 1]
 
         action = None
 
-        # **2. 强制 AI 先跳跃**
         if jump_moves:
             print(f"⚠️ AI Player {self.player} must jump: {jump_moves}")
-            action = random.choice(jump_moves)  # **必须先吃子**
+            action = random.choice(jump_moves)
 
-        else:  # **只有当没有跳跃时，才允许普通移动**
-            # **严格限制普通移动只能前进一步**
+        else:
             if normal_moves:
                 print(f"✅ AI Player {self.player} performs normal move: {normal_moves}")
-                action = random.choice(normal_moves)  # **只能移动 1 步**
+                action = random.choice(normal_moves)
 
             else:
-                return None  # **如果没有可用的普通移动，也不能乱选**
+                return None
 
-        # **最终安全检查**
         if action not in valid_moves:
             print(f"⚠️ AI picked an invalid move {action}, forcing a random valid move!")
             action = random.choice(valid_moves)
@@ -90,44 +85,39 @@ class QLearningAgent:
         return action
 
     def learn(self, state, action, reward, next_state):
-        """更新 Q 表并存储任务相似性"""
         valid_moves = self.env.valid_moves(self.player)
         if not valid_moves or action not in valid_moves:
-            return  # 没有合法移动，直接返回
-
+            return
         state_hash = self.state_to_hash(state)
         next_state_hash = self.state_to_hash(next_state)
 
-        # **确保 Q-table 初始化**
         if state_hash not in self.q_table:
-            self.q_table[state_hash] = np.full(len(valid_moves), -1.0)  # 仍然使用 -1.0 作为初始值
+            self.q_table[state_hash] = np.full(len(valid_moves), -1.0)
 
         if next_state_hash not in self.q_table:
-            self.q_table[next_state_hash] = np.zeros(len(valid_moves))  # 初始化 Q 值
+            self.q_table[next_state_hash] = np.zeros(len(valid_moves))
 
         try:
             action_index = valid_moves.index(action)
         except ValueError:
             print(f"⚠️ Action {action} not found in valid_moves: {valid_moves}")
-            return  # **如果动作无效，直接返回**
+            return
 
-        # **获取最佳下一步动作**
-        if len(self.q_table[next_state_hash]) > 0:  # **确保 next_state_hash 有数据**
+        if len(self.q_table[next_state_hash]) > 0:
             best_next_action = np.argmax(self.q_table[next_state_hash])
         else:
-            best_next_action = 0  # **如果 `q_table[next_state_hash]` 为空，默认 0**
+            best_next_action = 0
 
-        # **TD 目标计算**
+
         td_target = reward + self.discount_factor * self.q_table[next_state_hash][best_next_action]
         td_error = td_target - self.q_table[state_hash][action_index]
         self.q_table[state_hash][action_index] += self.learning_rate * td_error  # **更新 Q 值**
 
-        # **打印调试信息**
         print(
             f"Updated Q-table: {state_hash} | Action {action} | New Q-value: {self.q_table[state_hash][action_index]}")
 
         try:
-            self.task_similarity.store_state(state, action)  # **存储任务相似性**
+            self.task_similarity.store_state(state, action)
         except Exception as e:
             print(f"⚠️ Error storing state in task_similarity: {e}")
 
@@ -155,15 +145,14 @@ class QLearningAgent:
         q_table_dict = {str(state): q_values.tolist() for state, q_values in self.q_table.items()}  # 转换 JSON 格式
 
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(q_table_dict, f, indent=4)  # **格式化存储，方便手动修改**
+            json.dump(q_table_dict, f, indent=4)
         print(f"✅ Q-table saved to {filepath}")
 
     def load_q_table(self, filepath):
-        """从 JSON 加载 Q-table，如果文件不存在，则创建一个空白 Q-table"""
         if not os.path.exists(filepath):
             print(f"⚠️ Q-table file not found ({filepath}), creating a new empty Q-table.")
             self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
-            self.save_q_table(filepath)  # **创建空白 Q-table 并保存**
+            self.save_q_table(filepath)
             return
 
         try:

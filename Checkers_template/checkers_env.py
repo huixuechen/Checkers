@@ -4,7 +4,7 @@ class CheckersEnv:
     def __init__(self, board_size=8, player=1):
         self.has_moved = False
         self.must_jump = False
-        self.board_size = board_size  # 6x6 或 8x8 棋盘
+        self.board_size = board_size
         self.board = self.initialize_board()
         self.player = player
         self.last_move_was_jump = False
@@ -16,11 +16,11 @@ class CheckersEnv:
 
         for row in range(rows):
             for col in range(row % 2, self.board_size, 2):
-                board[row, col] = 2  # 玩家 2 的棋子
+                board[row, col] = 2
 
         for row in range(self.board_size - rows, self.board_size):
             for col in range(row % 2, self.board_size, 2):
-                board[row, col] = 1  # 玩家 1 的棋子
+                board[row, col] = 1
         return board
 
     def reset(self):
@@ -33,28 +33,27 @@ class CheckersEnv:
         moves = []
         jump_moves = []
         forward_directions = [(-1, -1), (-1, 1)] if player == 1 else [(1, -1), (1, 1)]
-        king_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]  # **王棋可以四向移动**
+        king_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
         for row in range(self.board_size):
             for col in range(self.board_size):
                 piece = self.board[row, col]
 
-                if piece == player or piece == player + 2:  # **普通棋子 或 王棋**
+                if piece == player or piece == player + 2:
                     piece_directions = king_directions if piece in [3, 4] else forward_directions
 
-                    # **检查普通移动**
+
                     for dr, dc in piece_directions:
                         new_row, new_col = row + dr, col + dc
                         if 0 <= new_row < self.board_size and 0 <= new_col < self.board_size:
                             if self.board[new_row, new_col] == 0:
                                 moves.append([row, col, new_row, new_col])
 
-                    # **检查吃子 (普通棋子必须严格跳±2)**
-                    for dr, dc in piece_directions:
-                        cap_row, cap_col = row + dr, col + dc  # 被跳过的棋子
-                        end_row, end_col = row + 2 * dr, col + 2 * dc  # 落点
 
-                        # **确保普通棋子只能吃相邻棋子，且坐标变化必须是 (±2, ±2)**
+                    for dr, dc in piece_directions:
+                        cap_row, cap_col = row + dr, col + dc
+                        end_row, end_col = row + 2 * dr, col + 2 * dc
+
                         if (
                                 0 <= cap_row < self.board_size and 0 <= cap_col < self.board_size and
                                 0 <= end_row < self.board_size and 0 <= end_col < self.board_size and
@@ -64,14 +63,14 @@ class CheckersEnv:
                         ):
                             jump_moves.append([row, col, end_row, end_col])
 
-                    # **王棋允许长距离跳跃吃子**
+
                     if piece in [3, 4]:
                         for dr, dc in king_directions:
                             temp_row, temp_col = row + dr, col + dc
-                            captured = False  # **确保王棋必须跳过棋子**
+                            captured = False
                             while 0 <= temp_row < self.board_size and 0 <= temp_col < self.board_size:
                                 if self.board[temp_row, temp_col] in [3 - player, (3 - player) + 2]:
-                                    captured = True  # **标记王棋吃子**
+                                    captured = True
                                 elif self.board[temp_row, temp_col] == 0 and captured:
                                     jump_moves.append([row, col, temp_row, temp_col])
                                 else:
@@ -84,15 +83,14 @@ class CheckersEnv:
         return jump_moves if jump_moves else moves  # **强制吃子规则**
 
     def capture_piece(self, action, player):
-        """确保吃子时必须跳过相邻的对方棋子"""
         start_row, start_col, end_row, end_col = action
 
-        if (end_row - start_row, end_col - start_col) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]:  # **严格限制普通棋子**
+        if (end_row - start_row, end_col - start_col) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]:
             mid_row = (start_row + end_row) // 2
             mid_col = (start_col + end_col) // 2
 
-            if self.board[mid_row, mid_col] in [3 - player, (3 - player) + 2]:  # **确保跳过的是对方棋子**
-                self.board[mid_row, mid_col] = 0  # **移除被吃掉的棋子**
+            if self.board[mid_row, mid_col] in [3 - player, (3 - player) + 2]:
+                self.board[mid_row, mid_col] = 0
 
     def step(self, action, player):
         """Execute a move and return the new state, shaped rewards, and game status"""
@@ -153,7 +151,7 @@ class CheckersEnv:
         return promotion_happened
 
     def handle_multiple_jumps(self, row, col, player):
-        """递归处理连跳吃子"""
+
         additional_moves = self.get_additional_jumps(row, col, player)
 
         # **确保所有可能的跳跃都被执行**
@@ -165,7 +163,7 @@ class CheckersEnv:
             self.handle_multiple_jumps(end_row, end_col, player)  # **递归处理连跳**
 
     def get_additional_jumps(self, row, col, player):
-        """检查是否可以继续跳跃吃子"""
+
         additional_moves = []
         directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
@@ -182,7 +180,7 @@ class CheckersEnv:
         return additional_moves
 
     def game_winner(self):
-        """检查是否有玩家获胜"""
+
         player1_pieces = np.sum(self.board == 1) + np.sum(self.board == 3)
         player2_pieces = np.sum(self.board == 2) + np.sum(self.board == 4)
 

@@ -9,8 +9,6 @@ class CheckerGUI:
         self.root = root
         self.root.title("Checkers")
         self.difficulty = difficulty
-
-        # 初始化棋盘大小
         self.board_size = 6 if difficulty == 'easy' else 8
         self.env = CheckersEnv(board_size=self.board_size)
         self.canvas_size = 500
@@ -19,11 +17,9 @@ class CheckerGUI:
         self.selected_piece = None
         self.valid_destinations = []
         self.history = []
-
-        # 初始化 AI 代理
         self.agent = self.create_agent()
 
-        # 设置 UI 界面
+
         self.setup_ui()
         self.render_board()
 
@@ -31,7 +27,7 @@ class CheckerGUI:
         return QLearningAgent(self.env, player=2, difficulty=self.difficulty)
 
     def setup_ui(self):
-        """设置 UI 界面"""
+
         main_frame = tk.Frame(self.root, bg="#D0E4C8")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -57,28 +53,25 @@ class CheckerGUI:
         col, row = event.x // self.cell_size, event.y // self.cell_size
         piece = self.env.board[row, col]
 
-        if piece in [1, 2, 3, 4]:  # **确保选中的棋子有效**
+        if piece in [1, 2, 3, 4]:
             self.selected_piece = (row, col)
 
-            # **获取所有合法移动**
             all_valid_moves = self.env.valid_moves(self.current_player)
 
-            # **区分普通棋子和王棋的移动**
             jump_moves = [move for move in all_valid_moves if abs(move[2] - move[0]) == 2]  # 普通吃子
             king_jump_moves = [move for move in all_valid_moves if
                                piece in [3, 4] and abs(move[2] - move[0]) > 2]  # 王棋远跳
 
-            # **高亮规则**
-            if jump_moves:  # **如果有吃子选项，必须吃子**
+            if jump_moves:
                 self.valid_destinations = [move[2:4] for move in jump_moves if move[:2] == [row, col]]
-            elif king_jump_moves:  # **王棋的长距离跳跃**
+            elif king_jump_moves:
                 self.valid_destinations = [move[2:4] for move in king_jump_moves if move[:2] == [row, col]]
-            else:  # **普通移动**
+            else:
                 self.valid_destinations = [move[2:4] for move in all_valid_moves if move[:2] == [row, col]]
 
             print(f"Valid moves for player {self.current_player} from ({row}, {col}): {self.valid_destinations}")
 
-            self.render_board()  # **重新渲染棋盘，确保高亮可移动位置**
+            self.render_board()
 
     def on_piece_release(self, event):
         """Handle piece release event and execute the move"""
@@ -123,7 +116,6 @@ class CheckerGUI:
                     self.ai_move()
 
     def regret_move(self):
-        """撤销上一步移动"""
         if self.history:
             last_state, last_player = self.history.pop()
             self.env.board = last_state
@@ -133,7 +125,7 @@ class CheckerGUI:
             messagebox.showinfo("Undo Move", "No moves to undo.")
 
     def set_difficulty(self, difficulty):
-        """调整难度并重置游戏"""
+
         self.difficulty = difficulty
         self.board_size = 6 if difficulty == 'easy' else 8
         self.cell_size = self.canvas_size // self.board_size
@@ -142,7 +134,6 @@ class CheckerGUI:
         self.reset_game()
 
     def render_board(self):
-        """渲染棋盘，并高亮当前选中棋子的合法移动位置"""
         self.canvas.delete("all")
 
         for row in range(self.board_size):
@@ -150,14 +141,11 @@ class CheckerGUI:
                 x0, y0 = col * self.cell_size, row * self.cell_size
                 x1, y1 = x0 + self.cell_size, y0 + self.cell_size
                 color = "#D0E4C8" if (row + col) % 2 == 0 else "#F0F5F1"
-
-                # **高亮棋子可移动的位置**
                 if (row, col) in self.valid_destinations:
-                    color = "#B0E57C"  # 绿色表示棋子可以移动的位置
+                    color = "#B0E57C"
 
-                # **高亮选中的棋子**
                 if self.selected_piece == (row, col):
-                    color = "#FFD700"  # 金色表示当前选中的棋子
+                    color = "#FFD700"
 
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="black")
 
@@ -172,7 +160,7 @@ class CheckerGUI:
                     self.canvas.create_oval(x0 + 5, y0 + 5, x1 - 5, y1 - 5, fill="red", outline="gold", width=5)
 
     def reset_game(self):
-        """重置游戏"""
+
         self.history.clear()
         self.env.reset()
         self.current_player = 1
@@ -181,14 +169,12 @@ class CheckerGUI:
         self.render_board()
 
     def check_winner(self):
-        """检查游戏是否结束"""
         winner = self.env.game_winner()
         if winner is not None:
             messagebox.showinfo("Game Over", f"Player {winner} Wins!")
             self.root.quit()
 
     def ai_move(self):
-        """让 AI 执行回合"""
         while self.current_player == 2:  # **AI 需要连跳**
             action = self.agent.choose_action(self.env.board)
             if action is not None:
@@ -196,21 +182,21 @@ class CheckerGUI:
                 self.env.step(action, self.current_player)
                 self.render_board()
                 self.check_winner()
-                if self.env.has_moved:  # **如果 AI 已经执行普通移动，直接结束回合**
+                if self.env.has_moved:
                     print(f"⚠️ AI Player {self.current_player} has already moved. Skipping turn.")
-                    self.current_player = 1  # **切换回合**
+                    self.current_player = 1
                     return
 
-                    # **检查 AI 是否可以继续吃子**
+
                 additional_jumps = [
                     move for move in self.env.valid_moves(self.current_player)
                     if move[:2] == action[2:4] and abs(move[2] - move[0]) == 2
                 ]
 
                 if not additional_jumps:
-                    self.current_player = 1  # **结束 AI 回合**
+                    self.current_player = 1
             else:
-                # AI 无法移动，游戏可能结束
+
                 winner = self.env.game_winner()
                 if winner is not None:
                     messagebox.showinfo("Game Over", f"Player {winner} Wins!")

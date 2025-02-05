@@ -5,7 +5,7 @@ Checker is a classic two-player strategy game where players move pieces across a
 
 ## Game Rules
 
-### 1. **Board Setup**
+### 1. Board Setup
    - The board size varies depending on the difficulty level:
      - **Low Difficulty:** 6x6 board, offering a simplified experience suitable for beginners.
      - **Medium Difficulty:** 8x8 board, providing the standard gameplay experience.
