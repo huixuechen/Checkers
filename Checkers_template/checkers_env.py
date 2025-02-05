@@ -24,12 +24,11 @@ class CheckersEnv:
         return board
 
     def reset(self):
-        """重置棋盘"""
+        """reset the board to initial state"""
         self.board = self.initialize_board()
         self.player = 1
 
     def valid_moves(self, player):
-        """返回当前玩家所有合法移动"""
         moves = []
         jump_moves = []
         forward_directions = [(-1, -1), (-1, 1)] if player == 1 else [(1, -1), (1, 1)]
@@ -41,7 +40,6 @@ class CheckersEnv:
 
                 if piece == player or piece == player + 2:
                     piece_directions = king_directions if piece in [3, 4] else forward_directions
-
 
                     for dr, dc in piece_directions:
                         new_row, new_col = row + dr, col + dc
