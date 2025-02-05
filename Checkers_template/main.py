@@ -12,7 +12,6 @@ import seaborn as sns
 
 
 def train_agent(env, agent1, agent2, num_episodes=10000):
-    """Train AI agents and debug Agent 2's issue."""
     total_rewards = []  # Tracks cumulative rewards
     win_history = []  # Tracks how often Agent 1 wins
 
@@ -26,7 +25,7 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
             current_agent = agent1 if env.player == 1 else agent2
             action = current_agent.choose_action(state)
 
-            # 🚨 Debugging: Print chosen action
+            # Debugging: Print chosen action
             print(f"🔹 Agent {env.player} chose action: {action}")
 
             if action is None:
@@ -35,7 +34,7 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
 
             next_state, raw_reward, done = env.step(action, env.player)
 
-            # 🚨 Debugging: Ensure turn switch is working
+            # Debugging: Ensure turn switch is working
             print(f"🔄 Switching to Agent {3 - env.player} after move.")
 
             # Properly switch turns
@@ -77,7 +76,6 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
 
 
 def plot_training_results(total_rewards, window_size=200):
-    """Plot smoothed training rewards over time."""
     plt.figure(figsize=(10, 5))
 
     smoothed_rewards = np.convolve(total_rewards, np.ones(window_size) / window_size, mode='valid')
@@ -96,7 +94,6 @@ def plot_training_results(total_rewards, window_size=200):
 
 
 def plot_win_rate(win_history, window_size=200):
-    """Plot AI win rate over time."""
     if not win_history:
         print("⚠️ No win history available! Skipping plot.")
         return
@@ -104,7 +101,6 @@ def plot_win_rate(win_history, window_size=200):
     plt.figure(figsize=(10, 5))
     smoothed_win_rate = np.convolve(win_history, np.ones(window_size) / window_size, mode='valid')
     plt.plot(smoothed_win_rate, label=f"Smoothed Win Rate (window={window_size})", color='green', linewidth=2)
-
     plt.xlabel("Episode")
     plt.ylabel("Win Rate")
     plt.title("AI Win Rate Over Time (Smoothed)")
@@ -162,8 +158,8 @@ def compare_ai_performance(env, agent_before, agent_after, num_games=100):
         elif winner == 2:
             after_wins += 1
 
-    print(f"🏆 Untrained AI Win Rate: {before_wins / num_games:.2%}")
-    print(f"🎯 Trained AI Win Rate: {after_wins / num_games:.2%}")
+    print(f"Untrained AI Win Rate: {before_wins / num_games:.2%}")
+    print(f"Trained AI Win Rate: {after_wins / num_games:.2%}")
 
 
 if __name__ == "__main__":
@@ -177,7 +173,7 @@ if __name__ == "__main__":
     agent1 = QLearningAgent(env, player=1, difficulty="easy")
     agent2 = QLearningAgent(env, player=2, difficulty="hard")
 
-    # 🚨 Debugging: Ensure agents can choose moves
+    # Debugging: Ensure agents can choose moves
     test_action_1 = agent1.choose_action(env.board)
     test_action_2 = agent2.choose_action(env.board)
     print(f"🔍 Agent 1 Test Action: {test_action_1}")
@@ -185,9 +181,9 @@ if __name__ == "__main__":
 
     total_rewards, win_history, _ = train_agent(env, agent1, agent2, num_episodes=50000)
 
-    # 🚨 Debugging: Check Q-table sizes
-    print(f"📌 Agent 1 Q-table size: {len(agent1.q_table)}")
-    print(f"📌 Agent 2 Q-table size: {len(agent2.q_table)}")
+    #  Debugging: Check Q-table sizes
+    print(f"Agent 1 Q-table size: {len(agent1.q_table)}")
+    print(f"Agent 2 Q-table size: {len(agent2.q_table)}")
 
     agent1.save_q_table(agent1.q_table_file)
     agent2.save_q_table(agent2.q_table_file)
