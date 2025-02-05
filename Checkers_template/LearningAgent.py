@@ -22,25 +22,25 @@ class QLearningAgent:
     def set_difficulty(self, difficulty):
         difficulty = difficulty.lower()
         if difficulty == "easy":
-            self.learning_rate = 0.1
-            self.discount_factor = 0.6
-            self.exploration_rate = 0.9
-            self.exploration_decay = 0.995
-            self.attack_bonus = 20
+            self.learning_rate = 0.15  # Increase learning speed
+            self.discount_factor = 0.8  # Make AI think long-term
+            self.exploration_rate = 0.3  # Reduce randomness
+            self.exploration_decay = 0.999  # Slow decay for steady learning
+            self.attack_bonus = 15
 
         elif difficulty == "medium":
-            self.learning_rate = 0.15
-            self.discount_factor = 0.75
-            self.exploration_rate = 0.7
-            self.exploration_decay = 0.99
-            self.attack_bonus = 30
+            self.learning_rate = 0.2
+            self.discount_factor = 0.9
+            self.exploration_rate = 0.1
+            self.exploration_decay = 0.9995  # Even slower decay
+            self.attack_bonus = 25
 
         elif difficulty == "hard":
-            self.learning_rate = 0.25
-            self.discount_factor = 0.9
-            self.exploration_rate = 0.5
-            self.exploration_decay = 0.995
-            self.attack_bonus = 50
+            self.learning_rate = 0.3
+            self.discount_factor = 0.95
+            self.exploration_rate = 0.05  # Almost fully deterministic
+            self.exploration_decay = 0.9997
+            self.attack_bonus = 35
         else:
             raise ValueError("Invalid difficulty level. Choose 'easy', 'medium', or 'hard'.")
 
