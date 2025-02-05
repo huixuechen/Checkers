@@ -94,50 +94,63 @@ class CheckersEnv:
             if self.board[mid_row, mid_col] in [3 - player, (3 - player) + 2]:  # **确保跳过的是对方棋子**
                 self.board[mid_row, mid_col] = 0  # **移除被吃掉的棋子**
 
-    def promote_to_king(self):
-        """达到对方底线后封王"""
-        for col in range(self.board_size):
-            if self.board[0, col] == 1:  # 玩家 1 到达底线
-                self.board[0, col] = 3  # **升级为王棋**
-            if self.board[self.board_size - 1, col] == 2:  # 玩家 2 到达底线
-                self.board[self.board_size - 1, col] = 4  # **升级为王棋**
-
     def step(self, action, player):
-        """Execute a move and return the new state"""
+        """Execute a move and return the new state, shaped rewards, and game status"""
         start_row, start_col, end_row, end_col = action
         self.board[end_row, end_col] = self.board[start_row, start_col]
         self.board[start_row, start_col] = 0
 
-        is_jump = abs(end_row - start_row) == 2  # **Check if it's a jump**
+        is_jump = abs(end_row - start_row) == 2  # Check if it's a jump
 
+        reward = 0  # Initialize reward
+
+        # Handle piece capture and reward for jumps
         if is_jump:
-            self.capture_piece(action, player)  # **Remove the captured piece**
-            additional_jumps = self.get_additional_jumps(end_row, end_col, player)
+            self.capture_piece(action, player)  # Remove the captured piece
+            reward += 2  # Reward for capturing a piece
 
+            additional_jumps = self.get_additional_jumps(end_row, end_col, player)
             if additional_jumps:
-                self.must_jump = True  # **Must continue jumping if possible**
-                return self.board.copy(), 1, False  # **Current player continues turn**
+                self.must_jump = True
+                return self.board.copy(), reward, False  # Player must continue turn
             else:
-                self.must_jump = False  # **No more jumps, switch turn**
+                self.must_jump = False
         else:
             if self.must_jump:
-                # **If a jump was made earlier, normal moves are not allowed**
-                return self.board.copy(), 0, False
+                # If a jump was possible earlier, normal moves are not allowed
+                return self.board.copy(), -1, False
 
-            self.must_jump = False  # **After a normal move, no more jumps allowed**
+            self.must_jump = False
 
-        self.promote_to_king()  # **Promote pieces to king if they reach the opposite end**
+        # Handle king promotion and reward
+        king_promotion = self.promote_to_king()
+        if king_promotion:
+            reward += 5  # Reward for king promotion
 
-        reward = 1 if is_jump else 0  # **No reward for normal moves**
+        # Check for game end
         winner = self.game_winner()
         done = winner is not None
 
         if done:
-            reward = 10 if winner == player else -10  # **Correctly assign reward**
-        else:
-            self.player = 1 if player == 2 else 2  # **Switch player**
+            reward += 10 if winner == player else -10  # Endgame reward
+
+        # Switch players
+        if not done:
+            self.player = 1 if player == 2 else 2
 
         return self.board.copy(), reward, done
+
+    def promote_to_king(self):
+        """Promote pieces to king and return if promotion happened"""
+        promotion_happened = False
+        for col in range(self.board_size):
+            if self.board[0, col] == 1:  # Player 1 promotion
+                self.board[0, col] = 3
+                promotion_happened = True
+            if self.board[self.board_size - 1, col] == 2:  # Player 2 promotion
+                self.board[self.board_size - 1, col] = 4
+                promotion_happened = True
+        return promotion_happened
 
     def handle_multiple_jumps(self, row, col, player):
         """递归处理连跳吃子"""

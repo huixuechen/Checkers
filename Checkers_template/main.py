@@ -41,18 +41,23 @@ def train_agent(env, agent1, agent2, num_episodes=10000):
             # Properly switch turns
             env.player = 3 - env.player
 
-            reward = raw_reward
             if done:
                 winner = env.game_winner()
                 if winner == 1:
-                    reward = 10
+                    reward = 10  # Agent 1 wins
                     win_history.append(1)
                 elif winner == 2:
-                    reward = -5
+                    reward = -5  # Agent 2 wins
                     win_history.append(0)
                 else:
-                    reward = 1
+                    reward = 2  # Draw
                     win_history.append(0.5)
+            else:
+                # Reward for capturing a piece
+                if env.capture_piece(action, env.player):
+                    reward = 3
+                else:
+                    reward = 0.1  # Encourage legal moves
 
             current_agent.learn(state, action, reward, next_state)
             state = next_state
@@ -170,7 +175,7 @@ if __name__ == "__main__":
     # Initialize AI and train
     env = CheckersEnv(board_size=8)
     agent1 = QLearningAgent(env, player=1, difficulty="easy")
-    agent2 = QLearningAgent(env, player=2, difficulty="medium")
+    agent2 = QLearningAgent(env, player=2, difficulty="hard")
 
     # 🚨 Debugging: Ensure agents can choose moves
     test_action_1 = agent1.choose_action(env.board)
@@ -178,7 +183,7 @@ if __name__ == "__main__":
     print(f"🔍 Agent 1 Test Action: {test_action_1}")
     print(f"🔍 Agent 2 Test Action: {test_action_2}")
 
-    total_rewards, win_history, _ = train_agent(env, agent1, agent2, num_episodes=10000)
+    total_rewards, win_history, _ = train_agent(env, agent1, agent2, num_episodes=50000)
 
     # 🚨 Debugging: Check Q-table sizes
     print(f"📌 Agent 1 Q-table size: {len(agent1.q_table)}")
@@ -187,8 +192,13 @@ if __name__ == "__main__":
     agent1.save_q_table(agent1.q_table_file)
     agent2.save_q_table(agent2.q_table_file)
 
+    average_q_values = [np.mean(list(agent.q_table.values())) for agent in [agent1, agent2]]
+    plt.plot(average_q_values, label="Q-value Convergence")
+    plt.legend()
+    plt.show()
+
     # Plot training results
     plot_training_results(total_rewards)
     plot_win_rate(win_history)
     plot_q_values(agent2.q_table)
-    compare_ai_performance(env, agent1, agent2, num_games=100)
+    compare_ai_performance(env, agent1, agent2, num_games=200)
