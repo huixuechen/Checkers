@@ -57,6 +57,12 @@ class QLearningAgent:
         if not valid_moves:
             return None
 
+        state_hash = self.task_similarity.find_similar_state(state)
+        if state_hash is not None:
+            best_action = self.task_similarity.get_best_action(state_hash, valid_moves)
+            if best_action:
+                return best_action
+
         state_hash = self.state_to_hash(state)
         self.visits[state_hash] += 1
 
@@ -170,5 +176,4 @@ class QLearningAgent:
             self.q_table = defaultdict(lambda: np.zeros(len(self.env.valid_moves(self.player) or [0])))
 
     def update_exploration_rate(self):
-        """更新探索率，防止探索率降到 0"""
         self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay)
